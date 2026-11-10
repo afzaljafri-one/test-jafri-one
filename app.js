@@ -633,13 +633,15 @@ function getServicesOverview(rawQuery) {
   const broadServicePatterns = [
     /\bwhat\s+(all\s+)?do\s+you\s+offer\b/i,
     /\bwhat\s+services?\s+do\s+you\s+(provide|offer|have)\b/i,
+    /\bwhat\s+services?\s+does\s+zodiacbee\s+(provide|offer|have)\b/i,
     /\bwhat\s+(astrology\s+)?services?\s+do\s+you\s+(provide|offer)\b/i,
     /\bwhat\s+can\s+i\s+do\s+(on\s+zodiacbee|here)\b/i,
     /\btell\s+me\s+about\s+(zodiacbee|your\s+services?|the\s+platform)\b/i,
     /\bwhat\s+is\s+available\s+on\s+(your\s+platform|zodiacbee)\b/i,
     /\bwhat\s+can\s+you\s+help\s+me\s+with\b/i,
     /\bwhat\s+are\s+your\s+features\b/i,
-    /\bwhat\s+does\s+zodiacbee\s+offer\b/i
+    /\bwhat\s+does\s+zodiacbee\s+offer\b/i,
+    /\bwhat\s+are\s+your\s+services\b/i
   ];
 
   if (broadServicePatterns.some(p => p.test(clean))) {
