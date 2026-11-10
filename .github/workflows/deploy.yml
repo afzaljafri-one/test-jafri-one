@@ -2,11 +2,11 @@ name: Deploy Chatbot to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "gh-pages"]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
