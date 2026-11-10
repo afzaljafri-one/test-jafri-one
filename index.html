@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AskBee - Astrology Guide | ZodiacBee</title>
+  <meta name="description" content="AskBee AI Bot - Testing website for Vedic wisdom, horoscopes, and baby names guidance.">
+  <link rel="icon" href="https://files.jotform.com/jufs/Bee_Zodiac/agent_files/avatar_images/Gemini_Generated_Image_acdtcxacdtcxacdt-removebg-preview_1_-6ac583e161f350.27103431.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <div class="hero-container">
+    <h1>
+      <span>AskBee</span> Astrology Guide
+    </h1>
+    <div class="motto-badge">✨ Your stars show positive changes ahead.</div>
+    <div class="testing-banner">AskBee AI Assistant · Knowledge Base: <strong>368 Q&amp;As</strong></div>
+  </div>
+
+  <div class="chat-wrapper">
+    <!-- Header -->
+    <div class="chat-header">
+      <div class="bot-profile">
+        <img 
+          src="https://files.jotform.com/jufs/Bee_Zodiac/agent_files/avatar_images/Gemini_Generated_Image_acdtcxacdtcxacdt-removebg-preview_1_-6ac583e161f350.27103431.png" 
+          alt="AskBee Avatar" 
+          class="avatar-img"
+        />
+        <div class="bot-info">
+          <h3>AskBee <span class="badge-live">Online</span></h3>
+          <p>Astrology Guide &amp; ZodiacBee Companion</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Starter Chips (From Jotform customInitialActionView + Core Topics) -->
+    <div class="quick-chips">
+      <button class="chip-btn" onclick="sendQuick('Check My Horoscope')">✨ Check My Horoscope</button>
+      <button class="chip-btn" onclick="sendQuick('Check Love & Compatibility')">❤️ Love &amp; Compatibility</button>
+      <button class="chip-btn" onclick="sendQuick('How can I generate my Kundli?')">🔮 Generate Kundli</button>
+      <button class="chip-btn" onclick="sendQuick('How does the baby names tool work?')">👶 Baby Names</button>
+      <button class="chip-btn" onclick="sendQuick('Am I currently going through Sade Sati?')">🪐 Sade Sati</button>
+      <button class="chip-btn" onclick="sendQuick('Can I get a refund?')">💳 Refund Policy</button>
+    </div>
+
+    <!-- Message Area -->
+    <div class="chat-messages" id="chatMessages">
+      <div class="message bot-msg">
+        Hi! I’m <strong>AskBee</strong>, an <strong>AI Agent</strong> and Astrology Guide for <a href="https://zodiacbee.com" target="_blank" rel="noopener noreferrer">zodiacbee.com</a>.
+        <br><br>
+        Your stars show positive changes ahead! How may I help you explore your horoscope, birth chart, or baby names today?
+        <div class="link-buttons">
+          <a href="https://zodiacbee.com/zodiac" target="_blank" rel="noopener noreferrer" class="action-btn">
+            <span>✨ Check Daily Horoscope</span>
+            <span>&rarr;</span>
+          </a>
+          <a href="https://zodiacbee.com/vedic-wisdom/kundli" target="_blank" rel="noopener noreferrer" class="action-btn">
+            <span>🔮 Generate Your Kundli Chart</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Box -->
+    <form class="chat-input-area" id="chatForm" onsubmit="handleSend(event)">
+      <input type="text" id="userInput" placeholder="Ask AI about Kundli, Horoscopes, Baby Names..." autocomplete="off">
+      <button type="submit" class="send-btn">&#10148;</button>
+    </form>
+  </div>
+
+  <script src="./app.js"></script>
+</body>
+</html>
