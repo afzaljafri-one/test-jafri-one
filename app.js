@@ -20,7 +20,7 @@ const STOP_WORDS = new Set([
 const CONVERSATIONAL_WORDS = new Set([
   'explain', 'know', 'find', 'make', 'check', 'read', 'mean',
   'get', 'give', 'see', 'look', 'ask', 'help', 'use', 'take',
-  'work', 'say', 'call', 'show'
+  'work', 'say', 'call', 'show', 'today', 'tomorrow', 'yesterday'
 ]);
 
 const CONTRACTIONS = {
@@ -226,6 +226,8 @@ class BM25SearchEngine {
 
       // Temporal modifier gating: queries with "tomorrow" must match docs with "tomorrow"
       if (rawClean.includes('tomorrow') && !allTokSet.has('tomorrow')) continue;
+      // Queries with "today" shouldn't match docs specifically titled "tomorrow"
+      if (rawClean.includes('today') && !rawClean.includes('tomorrow') && qTok.includes('tomorrow')) continue;
 
       // --- BM25 SCORING ---
       const docQStr = qTok.join(' ');
@@ -329,6 +331,73 @@ class BM25SearchEngine {
   }
 }
 
+// Explicit Intent Handler (Executes before BM25)
+function checkExplicitIntent(rawQuery) {
+  const q = rawQuery.trim().toLowerCase().replace(/[?!.,'’]/g, '');
+
+  // 1. Identity / Bot Name Queries
+  if (
+    /^(what\s+is\s+your\s+name|whats\s+your\s+name|what\s+is\s+ur\s+name|your\s+name)$/i.test(q)
+  ) {
+    return {
+      answer: "I'm **AskBee**, your astrology guide and ZodiacBee companion. How can I help you explore your horoscope, birth chart, or baby names today?",
+      urls: [
+        "https://zodiacbee.com/vedic-wisdom",
+        "https://zodiacbee.com/baby-names",
+        "https://zodiacbee.com/terms"
+      ]
+    };
+  }
+
+  if (
+    /^(who\s+are\s+you|what\s+are\s+you|tell\s+me\s+about\s+yourself|who\s+r\s+u|introduce\s+yourself)$/i.test(q)
+  ) {
+    return {
+      answer: "I'm **AskBee**, an AI astrology guide and companion for [zodiacbee.com](https://zodiacbee.com). I help you explore Vedic astrology concepts—such as your Kundli birth chart, Rashi, Nakshatra, marriage compatibility, daily Panchang, and celestial baby name recommendations. How can I assist you today?",
+      urls: [
+        "https://zodiacbee.com/vedic-wisdom",
+        "https://zodiacbee.com/baby-names",
+        "https://zodiacbee.com/terms"
+      ]
+    };
+  }
+
+  // 2. Ambiguous Short Query: "my name"
+  if (/^my\s+name$/i.test(q) || /^about\s+my\s+name$/i.test(q)) {
+    return {
+      answer: "What would you like to know about your name? You can explore:\n- **Name Numerology**: How your name's numbers influence your life.\n- **Baby Names**: Finding lucky names based on birth Nakshatra and Moon sign.\n- **Naming Syllable (Akshar)**: Which starting letter matches your birth chart.\n\nCould you clarify which topic you would like to explore?",
+      urls: [
+        "https://zodiacbee.com/calculator/first-name",
+        "https://zodiacbee.com/baby-names"
+      ]
+    };
+  }
+
+  // 3. Ambiguous Single-Word Query: "name" or "names"
+  if (/^(name|names)$/i.test(q)) {
+    return {
+      answer: "Could you please clarify your question about names? For example, are you looking for:\n1. **Baby Name Suggestions** based on Vedic astrology\n2. **Name Numerology** and your name number\n3. **Naming Syllables (Akshar)** for a specific Nakshatra?",
+      urls: [
+        "https://zodiacbee.com/baby-names",
+        "https://zodiacbee.com/calculator/first-name"
+      ]
+    };
+  }
+
+  // 4. "What does my name mean?"
+  if (/^what\s+does\s+my\s+name\s+mean$/i.test(q) || /^meaning\s+of\s+my\s+name$/i.test(q)) {
+    return {
+      answer: "I don't have a personal dictionary of every name's meaning in my knowledge base. However, if you are looking for name numerology or baby names with auspicious spiritual and celestial meanings, I can guide you! Would you like to check Name Numerology or explore meaningful baby names?",
+      urls: [
+        "https://zodiacbee.com/calculator/first-name",
+        "https://zodiacbee.com/baby-names"
+      ]
+    };
+  }
+
+  return null;
+}
+
 // UI Controller
 let searchEngine = null;
 const chatMessages = document.getElementById('chatMessages');
@@ -354,27 +423,50 @@ function sendQuick(text) {
 }
 
 function formatTextWithLinks(text) {
+  // Convert markdown bold **text** to <strong>text</strong>
+  let formatted = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   // Convert [text](url) to <a>
-  let formatted = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  formatted = formatted.replace(/\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   // Convert standalone URLs to <a>
   formatted = formatted.replace(/(?<!href=")(https?:\/\/[^\s\)]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  // Convert newlines to <br>
+  formatted = formatted.replace(/\n/g, '<br>');
   return formatted;
 }
 
 function getButtonLabel(url) {
-  if (url.includes("/zodiac")) return "✨ Explore Horoscope Readings";
-  if (url.includes("kundli")) return "🔮 Open Kundli Report";
-  if (url.includes("kundali-match")) return "💑 Check Marriage Compatibility";
-  if (url.includes("sade-sati")) return "🪐 Open Sade Sati Calculator";
-  if (url.includes("baby-names/lo-shu")) return "🔢 View Lo Shu Grid";
-  if (url.includes("baby-names/profile")) return "👶 Enter Baby Birth Details";
-  if (url.includes("baby-names")) return "👶 Explore Baby Names";
-  if (url.includes("panchang")) return "📅 View Daily Panchang";
-  if (url.includes("refund")) return "📄 Read Refund Policy";
-  if (url.includes("terms")) return "⚖️ Terms & Support";
-  if (url.includes("calculator/first-name")) return "🔤 Name Numerology Calculator";
-  if (url.includes("calculator/moon-sign")) return "🌙 Moon Sign Calculator";
-  return "Visit ZodiacBee Page";
+  if (!url) return "✨ Visit ZodiacBee";
+  const cleanUrl = url.trim();
+
+  // 1. Specific Calculators & Tools
+  if (cleanUrl.includes("/calculator/first-name")) return "🔤 Name Numerology Calculator";
+  if (cleanUrl.includes("/calculator/moon-sign")) return "🌙 Moon Sign Calculator";
+
+  // 2. Baby Names Section
+  if (cleanUrl.includes("/baby-names/lo-shu")) return "🔢 View Lo Shu Grid";
+  if (cleanUrl.includes("/baby-names/profile")) return "👶 Enter Baby Birth Details";
+  if (cleanUrl.includes("/baby-names")) return "👶 Baby Names";
+
+  // 3. Vedic Wisdom Specific Reports
+  if (cleanUrl.includes("/vedic-wisdom/kundali-match")) return "💑 Check Marriage Compatibility";
+  if (cleanUrl.includes("/vedic-wisdom/kundli")) return "🔮 Open Kundli Report";
+  if (cleanUrl.includes("/vedic-wisdom/sade-sati")) return "🪐 Open Sade Sati Calculator";
+  if (cleanUrl.includes("/vedic-wisdom/panchang")) return "📅 View Daily Panchang";
+  if (cleanUrl.includes("/vedic-wisdom/Manglik-Dosha") || cleanUrl.includes("manglik")) return "🔥 Check Manglik Dosha";
+  if (cleanUrl.includes("/vedic-wisdom/kaal-sarp-dosha")) return "🐍 Kaal Sarp Dosha Report";
+  if (cleanUrl.includes("/vedic-wisdom/mahadasha")) return "⏳ Mahadasha Planetary Cycles";
+  if (cleanUrl.includes("/vedic-wisdom/pitra-dosha")) return "🕊️ Pitra Dosha Guide";
+  if (cleanUrl.includes("/vedic-wisdom")) return "🔮 Vedic Wisdom";
+
+  // 4. Support, Terms & Refund Policies
+  if (cleanUrl.includes("/refund-policy") || cleanUrl.includes("refund")) return "📄 Read Refund Policy";
+  if (cleanUrl.includes("/privacy")) return "🔒 Privacy Policy";
+  if (cleanUrl.includes("/terms")) return "💬 ZodiacBee Support";
+
+  // 5. Horoscope / Zodiac Page (Must match pathname /zodiac, NOT domain zodiacbee.com)
+  if (/\/zodiac(\/|\?|#|$)/.test(cleanUrl)) return "✨ Explore Horoscope Readings";
+
+  return "✨ Visit ZodiacBee";
 }
 
 async function handleSend(e) {
@@ -399,10 +491,22 @@ async function handleSend(e) {
 
   typingElem.remove();
 
+  // 1. Explicit Identity & Clarification Intent Check (Takes priority over BM25)
+  const explicit = checkExplicitIntent(query);
+  if (explicit) {
+    appendBotMessage(explicit.answer, explicit.urls);
+    return;
+  }
+
+  // 2. BM25 Knowledge Base Search
   if (!searchEngine) {
     appendBotMessage(
       "The knowledge base is currently loading. Please try again in a moment.",
-      ["https://zodiacbee.com"]
+      [
+        "https://zodiacbee.com/vedic-wisdom",
+        "https://zodiacbee.com/baby-names",
+        "https://zodiacbee.com/terms"
+      ]
     );
     return;
   }
@@ -415,7 +519,7 @@ async function handleSend(e) {
     const uniqueUrls = [...new Set(urls)].slice(0, 2);
     appendBotMessage(topMatch.answer, uniqueUrls);
   } else {
-    // Intelligent Fallback with topic choices and clarification
+    // 3. Intelligent Fallback with topic choices and clarification
     appendBotMessage(
       "I couldn't find a sufficiently relevant answer to that question in my knowledge base. Could you rephrase your question or choose a topic such as Vedic Astrology, Baby Names or ZodiacBee Support?",
       [
