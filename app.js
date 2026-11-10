@@ -685,6 +685,39 @@ function sendQuick(text) {
   handleSend(new Event('submit'));
 }
 
+// Floating Chat Widget Controller
+function toggleChat(forceOpen) {
+  const chatWrapper = document.getElementById('chatWrapper');
+  const launcherBtn = document.getElementById('chatLauncherBtn');
+  const launcherBubble = document.getElementById('chatLauncherBubble');
+  if (!chatWrapper) return;
+
+  const isOpen = chatWrapper.classList && chatWrapper.classList.contains('active');
+  const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !isOpen;
+
+  if (shouldOpen) {
+    if (chatWrapper.classList) chatWrapper.classList.add('active');
+    if (launcherBtn && launcherBtn.classList) launcherBtn.classList.add('chat-open');
+    if (launcherBubble) launcherBubble.style.display = 'none';
+    const input = document.getElementById('userInput');
+    if (input && typeof input.focus === 'function') setTimeout(() => input.focus(), 250);
+  } else {
+    if (chatWrapper.classList) chatWrapper.classList.remove('active');
+    if (launcherBtn && launcherBtn.classList) launcherBtn.classList.remove('chat-open');
+  }
+}
+
+function dismissBubble(e) {
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+  const bubble = document.getElementById('chatLauncherBubble');
+  if (bubble) bubble.style.display = 'none';
+}
+
+function openAndAsk(text) {
+  toggleChat(true);
+  sendQuick(text);
+}
+
 function formatTextWithLinks(text) {
   // Convert markdown bold **text** to <strong>text</strong>
   let formatted = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -860,6 +893,14 @@ function appendBotMessage(answer, urls) {
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-  initKnowledgeBase();
-});
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('DOMContentLoaded', () => {
+    initKnowledgeBase();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      toggleChat(false);
+    }
+  });
+}

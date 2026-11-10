@@ -12,15 +12,80 @@
 </head>
 <body>
 
-  <div class="hero-container">
-    <h1>
-      <span>AskBee</span> Astrology Guide
-    </h1>
-    <div class="motto-badge">✨ Your stars show positive changes ahead.</div>
-    <div class="testing-banner">AskBee AI Assistant · Knowledge Base: <strong>368 Q&amp;As</strong></div>
-  </div>
+  <!-- Landing Page Container -->
+  <main class="page-container">
+    <div class="hero-container">
+      <div class="brand-avatar-badge">
+        <img 
+          src="https://files.jotform.com/jufs/Bee_Zodiac/agent_files/avatar_images/Gemini_Generated_Image_acdtcxacdtcxacdt-removebg-preview_1_-6ac583e161f350.27103431.png" 
+          alt="AskBee Mascot" 
+          class="hero-avatar"
+        />
+      </div>
+      <h1>
+        <span>AskBee</span> Astrology Guide
+      </h1>
+      <div class="motto-badge">✨ Your stars show positive changes ahead.</div>
+      <div class="testing-banner">AskBee AI Assistant · Knowledge Base: <strong>409 Q&amp;As</strong></div>
+      
+      <!-- Primary CTA to open Chat -->
+      <div class="hero-cta-wrapper">
+        <button class="hero-cta-btn" onclick="toggleChat(true)" aria-label="Open AskBee Chat Window">
+          <span class="cta-pulse"></span>
+          <span>💬 Open AskBee Chat</span>
+          <span class="cta-arrow">&rarr;</span>
+        </button>
+      </div>
+    </div>
 
-  <div class="chat-wrapper">
+    <!-- Topic Discovery Showcase -->
+    <section class="topic-grid">
+      <div class="topic-card" onclick="openAndAsk('What is Kundli?')">
+        <div class="topic-icon">🔮</div>
+        <h3>Vedic Wisdom</h3>
+        <p>Kundli birth charts, Sade Sati, Manglik Dosha, Panchang, and Vedic remedies.</p>
+        <span class="topic-action">Ask AskBee &rarr;</span>
+      </div>
+
+      <div class="topic-card" onclick="openAndAsk('Can I use Tarot on ZodiacBee?')">
+        <div class="topic-icon">🃏</div>
+        <h3>Tarot Lounge</h3>
+        <p>Interactive card draws for daily guidance, love, relationships, and career dilemmas.</p>
+        <span class="topic-action">Ask AskBee &rarr;</span>
+      </div>
+
+      <div class="topic-card" onclick="openAndAsk('Check My Horoscope')">
+        <div class="topic-icon">✨</div>
+        <h3>Horoscopes &amp; Zodiac</h3>
+        <p>Daily, weekly, and monthly predictions, zodiac sign traits, and 7-day celestial outlooks.</p>
+        <span class="topic-action">Ask AskBee &rarr;</span>
+      </div>
+
+      <div class="topic-card" onclick="openAndAsk('Where can I find baby names?')">
+        <div class="topic-icon">👶</div>
+        <h3>Celestial Baby Names</h3>
+        <p>Auspicious name guidance based on Nakshatra Akshar syllables and Lo Shu grid.</p>
+        <span class="topic-action">Ask AskBee &rarr;</span>
+      </div>
+
+      <div class="topic-card" onclick="openAndAsk('What astrology reports are available?')">
+        <div class="topic-icon">📊</div>
+        <h3>In-Depth Reports</h3>
+        <p>Natal birth chart blueprint, Synastry relationship compatibility, and planetary transits.</p>
+        <span class="topic-action">Ask AskBee &rarr;</span>
+      </div>
+
+      <div class="topic-card" onclick="openAndAsk('What all do you offer?')">
+        <div class="topic-icon">🌟</div>
+        <h3>Services Overview</h3>
+        <p>Explore everything ZodiacBee has to offer across free daily tools, reports, and plans.</p>
+        <span class="topic-action">Ask AskBee &rarr;</span>
+      </div>
+    </section>
+  </main>
+
+  <!-- Floating Chat Window (Accessed via Chat Icon) -->
+  <div class="chat-wrapper" id="chatWrapper" role="dialog" aria-modal="true" aria-label="AskBee Chat Window">
     <!-- Header -->
     <div class="chat-header">
       <div class="bot-profile">
@@ -34,6 +99,7 @@
           <p>Astrology Guide &amp; ZodiacBee Companion</p>
         </div>
       </div>
+      <button class="chat-close-btn" onclick="toggleChat(false)" title="Close Chat" aria-label="Close Chat">&times;</button>
     </div>
 
     <!-- Quick Starter Chips (From Jotform customInitialActionView + Core Topics) -->
@@ -43,7 +109,7 @@
       <button class="chip-btn" onclick="sendQuick('How can I generate my Kundli?')">🔮 Generate Kundli</button>
       <button class="chip-btn" onclick="sendQuick('How does the baby names tool work?')">👶 Baby Names</button>
       <button class="chip-btn" onclick="sendQuick('Am I currently going through Sade Sati?')">🪐 Sade Sati</button>
-      <button class="chip-btn" onclick="sendQuick('Can I get a refund?')">💳 Refund Policy</button>
+      <button class="chip-btn" onclick="sendQuick('What all do you offer?')">🌟 All Services</button>
     </div>
 
     <!-- Message Area -->
@@ -72,8 +138,27 @@
     <!-- Input Box -->
     <form class="chat-input-area" id="chatForm" onsubmit="handleSend(event)">
       <input type="text" id="userInput" placeholder="Ask AI about Kundli, Horoscopes, Baby Names..." autocomplete="off">
-      <button type="submit" class="send-btn">&#10148;</button>
+      <button type="submit" class="send-btn" aria-label="Send message">&#10148;</button>
     </form>
+  </div>
+
+  <!-- Floating Chat Launcher Icon Container -->
+  <div class="chat-launcher-container" id="chatLauncherContainer">
+    <div class="chat-launcher-bubble" id="chatLauncherBubble" onclick="toggleChat(true)">
+      <span>✨ Chat with AskBee</span>
+      <button class="bubble-close" onclick="dismissBubble(event)" title="Dismiss" aria-label="Dismiss">&times;</button>
+    </div>
+    <button class="chat-launcher-btn" id="chatLauncherBtn" onclick="toggleChat()" aria-label="Toggle AskBee Chat" title="Open AskBee Chat">
+      <div class="launcher-icon-open">
+        <img 
+          src="https://files.jotform.com/jufs/Bee_Zodiac/agent_files/avatar_images/Gemini_Generated_Image_acdtcxacdtcxacdt-removebg-preview_1_-6ac583e161f350.27103431.png" 
+          alt="AskBee Mascot" 
+          class="launcher-avatar"
+        />
+        <span class="launcher-online-dot"></span>
+      </div>
+      <div class="launcher-icon-close">&times;</div>
+    </button>
   </div>
 
   <script src="./app.js"></script>
