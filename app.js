@@ -331,7 +331,127 @@ class BM25SearchEngine {
   }
 }
 
-// Explicit Intent Handler (Executes before BM25)
+// 1. Critical Crisis & Suicide Prevention Safety Handler (Highest Priority)
+function checkCrisisSafety(rawQuery) {
+  if (!rawQuery) return null;
+  const raw = rawQuery.trim();
+
+  // Normalize query and expand common contractions
+  let clean = raw.toLowerCase();
+  const contractions = {
+    "what's": "what is",
+    "whats": "what is",
+    "where's": "where is",
+    "wheres": "where is",
+    "how's": "how is",
+    "hows": "how is",
+    "don't": "do not",
+    "dont": "do not",
+    "doesn't": "does not",
+    "doesnt": "does not",
+    "can't": "cannot",
+    "cant": "cannot",
+    "won't": "will not",
+    "wont": "will not",
+    "i'm": "i am",
+    "im": "i am",
+    "i've": "i have",
+    "i'll": "i will"
+  };
+  for (const [k, v] of Object.entries(contractions)) {
+    clean = clean.replace(new RegExp(`\\b${k}\\b`, 'g'), v);
+  }
+  clean = clean.replace(/[?!.,'’"“”]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // A. Educational / Helpline Inquiries
+  // Distinctly separated from personal crisis per requirement
+  const isEdu =
+    /\b(what\s+is|tell\s+me|find|how\s+to\s+contact|who\s+can\s+i\s+call|number|hotline|helpline|phone)\b/i.test(clean) &&
+    /\b(suicide|crisis\s+(helpline|hotline|number)|988)\b/i.test(clean) &&
+    !/\b(i\s+want\s+to|i\s+am\s+going\s+to|i\s+might|my\s+friend|my\s+daughter|my\s+son|kill\s+myself|hurt\s+myself|end\s+my\s+life|commit\s+suicide)\b/i.test(clean);
+
+  if (isEdu) {
+    if (/\b(us|united\s+states|usa|america)\b/i.test(clean)) {
+      return {
+        answer: "In the **United States**, the Suicide & Crisis Lifeline is **988**.\n\n- **Call or Text**: **988** (available 24/7, toll-free, and confidential across the US).\n- **Online Chat**: Available 24/7 at [988lifeline.org](https://988lifeline.org/).\n- **Immediate Danger**: If someone is in immediate danger or requires urgent medical attention, call **911** or go to the nearest emergency department immediately.",
+        urls: [
+          { url: "tel:988", label: "Call or Text 988 — US" },
+          { url: "https://988lifeline.org/", label: "Chat with 988 — US" }
+        ]
+      };
+    }
+    if (/\b(canada|canadian|ca)\b/i.test(clean)) {
+      return {
+        answer: "In **Canada**, the Suicide Crisis Helpline is **988**.\n\n- **Call or Text**: **988** (available 24/7, toll-free, in English and French across all provinces and territories).\n- **Official Website**: [988.ca](https://988.ca/).\n- **Immediate Danger**: If someone is in immediate danger or needs urgent care, call **911** or visit your nearest emergency department immediately.",
+        urls: [
+          { url: "tel:988", label: "Call or Text 988 — Canada" },
+          { url: "https://988.ca/", label: "Visit 988 Canada" }
+        ]
+      };
+    }
+    // General Educational Helpline Info (both US & Canada + international guidance)
+    return {
+      answer: "If you or someone you know is looking for suicide prevention or crisis support, free, 24/7 confidential helplines are available:\n\n- **United States**: Call or text **988**, or chat online at [988lifeline.org](https://988lifeline.org/).\n- **Canada**: Call or text **988**, or visit [988.ca](https://988.ca/).\n- **Other Countries**: Please contact your local emergency services (such as 112 in the UK/Europe, 000 in Australia) or your national crisis helpline.\n- **Immediate Danger**: Call your local emergency number (such as 911) or visit the nearest emergency room.",
+      urls: [
+        { url: "tel:988", label: "Call or Text 988 — US" },
+        { url: "https://988lifeline.org/", label: "Chat with 988 — US" },
+        { url: "tel:988", label: "Call or Text 988 — Canada" },
+        { url: "https://988.ca/", label: "Visit 988 Canada" }
+      ]
+    };
+  }
+
+  // B. Third-Party Crisis Statements (Concern for a friend, child, loved one)
+  const thirdPartyPattern = /\b(my\s+(friend|daughter|son|brother|sister|mother|father|mom|dad|partner|husband|wife|cousin|child|colleague|roommate)|someone\s+i\s+know|a\s+friend\s+of\s+mine|someone|anybody)\b.*\b(suicide|suicidal|kill\s+(himself|herself|themselves|themself)|end\s+(his|her|their)\s+life|hurt\s+(himself|herself|themselves|themself)|harm\s+(himself|herself|themselves|themself)|take\s+(his|her|their)\s+(own\s+)?life|wants\s+to\s+die)\b/i;
+
+  if (thirdPartyPattern.test(clean)) {
+    return {
+      answer: "Thank you for reaching out and caring. Supporting someone who is thinking about suicide can be deeply concerning, but you don't have to carry this alone.\n\n**If they are in immediate danger:**\n- Stay with the person if it is safe to do so.\n- Remove access to any means of self-harm.\n- Involve another trusted family member, guardian, or healthcare professional immediately.\n- Call your local emergency number (such as **911** in the US and Canada) or accompany them to the nearest hospital emergency room.\n\n**Free, 24/7 Crisis Support (For Both You and Them):**\nCrisis counsellors are trained to support people in crisis as well as friends and family members:\n- **United States**: Call or text **988**, or chat online at [988lifeline.org](https://988lifeline.org/).\n- **Canada**: Call or text **988**, or visit [988.ca](https://988.ca/).\n- **Other Countries**: Please contact your local emergency services or national crisis helpline.",
+      urls: [
+        { url: "tel:988", label: "Call or Text 988 — US" },
+        { url: "https://988lifeline.org/", label: "Chat with 988 — US" },
+        { url: "tel:988", label: "Call or Text 988 — Canada" },
+        { url: "https://988.ca/", label: "Visit 988 Canada" }
+      ]
+    };
+  }
+
+  // C. Personal Crisis Statements (Suicidal thoughts, intent, or self-harm)
+  const personalCrisisPatterns = [
+    /\b(suicide|suicidal)\b/i,
+    /\b(kill|killing|murder)\s+myself\b/i,
+    /\b(hurt|hurting|harm|harming|injure|injuring|cut|cutting)\s+myself\b/i,
+    /\b(take|taking|end|ending)\s+my\s+(own\s+)?life\b/i,
+    /\b(end|ending)\s+it\s+all\b/i,
+    /\b(want|wish|wanna|going)\s+to\s+die\b/i,
+    /\b(wish|wished)\s+i\s+(were|was)\s+dead\b/i,
+    /\b(better\s+off|rather\s+be)\s+dead\b/i,
+    /\b(do\s+not|dont)\s+want\s+to\s+live(\s+anymore)?\b/i,
+    /\btired\s+of\s+living\b/i,
+    /\bno\s+(reason|point|purpose)\s+(to\s+live|in\s+living|living)\b/i,
+    /\b(cannot|can\s*t)\s+(go\s+on|take\s+this|continue|handle\s+this)(\s+anymore)?\b/i,
+    /\bhopeless\s+and\s+(cannot|can\s*t)\s+go\s+on\b/i,
+    /\b(want|wish)\s+to\s+(disappear\s+forever|vanish\s+forever|sleep\s+forever|never\s+wake\s+up)\b/i
+  ];
+
+  const isPersonalCrisis = personalCrisisPatterns.some(pattern => pattern.test(clean));
+
+  if (isPersonalCrisis) {
+    return {
+      answer: "I'm really sorry you're going through something this painful. Thank you for telling me. You don't have to face this alone, and I'm glad you reached out.\n\nIf you are thinking about suicide or feel you might hurt yourself, please connect with a trained crisis counsellor now. They are there to listen without judging you.\n\n**Are you in immediate danger right now, or have you already hurt yourself?**\nIf you might act on these thoughts now, have seriously harmed yourself, or cannot keep yourself safe, please call your local emergency number (such as **911** in the US and Canada) or go to the nearest emergency department immediately. If possible, move near someone you trust and ask them to stay with you.\n\n**Free, 24/7 Confidential Crisis Support:**\n- **United States**: Call or text **988**, or chat at [988lifeline.org](https://988lifeline.org/).\n- **Canada**: Call or text **988**, or visit [988.ca](https://988.ca/).\n- **Other Countries**: Please contact your local emergency services (such as 112 in the UK/Europe, 000 in Australia, or your national helpline). If you let me know which country you are in, I can help share your country's crisis support contact.",
+      urls: [
+        { url: "tel:988", label: "Call or Text 988 — US" },
+        { url: "https://988lifeline.org/", label: "Chat with 988 — US" },
+        { url: "tel:988", label: "Call or Text 988 — Canada" },
+        { url: "https://988.ca/", label: "Visit 988 Canada" }
+      ]
+    };
+  }
+
+  return null;
+}
+
+// 2. Explicit Intent Handler (Identity, Name & Date)
 function checkExplicitIntent(rawQuery) {
   const q = rawQuery.trim().toLowerCase().replace(/[?!.,'’]/g, '');
 
@@ -427,6 +547,118 @@ function checkExplicitIntent(rawQuery) {
   return null;
 }
 
+// 3. Service Discovery & Platform Guidance Intent Handler
+function getServicesOverview(rawQuery) {
+  if (!rawQuery) return null;
+  const raw = rawQuery.trim();
+
+  let clean = raw.toLowerCase();
+  const contractions = {
+    "what's": "what is",
+    "whats": "what is",
+    "where's": "where is",
+    "wheres": "where is",
+    "how's": "how is",
+    "hows": "how is"
+  };
+  for (const [k, v] of Object.entries(contractions)) {
+    clean = clean.replace(new RegExp(`\\b${k}\\b`, 'g'), v);
+  }
+  clean = clean.replace(/[?!.,'’"“”]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // 1. Difference between Vedic and Western Astrology
+  if (
+    /\b(difference\s+between\s+(vedic|jyotish)\s+and\s+western|difference\s+between\s+western\s+and\s+(vedic|jyotish)|vedic\s+vs\s+western|western\s+vs\s+vedic)\b/i.test(clean)
+  ) {
+    return {
+      answer: "While both systems offer profound cosmic guidance, Vedic and Western astrology differ in three fundamental ways:\n\n1. **Zodiac System (Sidereal vs. Tropical)**:\n   - **Vedic Astrology (Jyotish)** uses the **Sidereal zodiac**, aligned with the actual observable constellations in the sky and accounting for the Earth's axial precession (*Ayanamsha*).\n   - **Western Astrology** uses the **Tropical zodiac**, fixed to the Earth's seasons beginning at the Spring Equinox (0° Aries).\n\n2. **Core Focal Point (Moon vs. Sun)**:\n   - **Vedic Astrology** centers primarily on your **Moon Sign (Chandra Rashi)**, Rising Sign (Lagna), and the 27 lunar mansions (**Nakshatras**), revealing your inner emotional mind and karmic pattern.\n   - **Western Astrology** centers primarily on your **Sun Sign**, highlighting external personality and conscious identity.\n\n3. **Predictive Methods & Timing**:\n   - **Vedic Astrology** uses the planetary **Dasha system** (such as Vimshottari Mahadasha) and divisional charts (Vargas) to time life events with precision, accompanied by Vedic remedies.\n   - **Western Astrology** relies on planetary transits, secondary progressions, and aspect geometry.\n\nZodiacBee offers both! Explore your Sidereal Kundli under Vedic Wisdom, or read your Tropical forecasts in our Horoscopes section.",
+      urls: [
+        "https://zodiacbee.com/vedic-wisdom",
+        "https://zodiacbee.com/zodiac"
+      ]
+    };
+  }
+
+  // 2. Specific Service: Tarot Lounge
+  if (
+    /\b(can\s+i\s+use\s+tarot|tarot\s+on\s+zodiacbee|tell\s+me\s+about\s+tarot|what\s+is\s+tarot\s+lounge|tarot\s+reading\s+available|do\s+you\s+have\s+tarot|tarot\s+card\s+reading)\b/i.test(clean)
+  ) {
+    return {
+      answer: "Yes! ZodiacBee features an interactive **Tarot Lounge** designed for intuitive guidance and clarity.\n\nIn the Tarot Lounge, you can:\n- **Daily Guidance**: Draw cards for daily reflection and mindfulness.\n- **Love & Relationships**: Gain cosmic perspectives on relationship dynamics, harmony, and future paths.\n- **Career & Decisions**: Seek intuitive insight for major life decisions and personal growth.\n\nEach reading provides deep, grounded interpretations to help you navigate your journey with confidence.",
+      urls: [
+        "https://zodiacbee.com/tarot"
+      ]
+    };
+  }
+
+  // 3. Specific Service: Astrology Reports Available
+  if (
+    /\b(what\s+(astrology\s+)?reports?\s+(are\s+available|can\s+i\s+generate|do\s+you\s+(offer|provide|have))|astrology\s+reports?\s+available|available\s+reports?)\b/i.test(clean)
+  ) {
+    return {
+      answer: "ZodiacBee offers a comprehensive suite of personalized Vedic and Western astrology reports:\n\n- **Natal Chart Report**: Detailed psychological and cosmic blueprint of your birth chart, planetary houses, and aspects.\n- **Synastry Chart Report**: In-depth relationship compatibility report comparing two birth charts for romantic or partnership synergy.\n- **Transit Chart Report**: Tracks current planetary transits against your natal placements to navigate upcoming phases.\n- **Vedic Kundli & Dosha Reports**: Complete birth chart analysis covering Sade Sati, Manglik Dosha, Kaal Sarp Dosha, and Mahadasha cycles.\n- **Daily Panchang Report**: Daily Vedic almanac featuring Tithi, Nakshatra, Yoga, Karana, and auspicious timings.\n- **Yearly & Monthly Horoscopes**: In-depth predictive forecasts for career, finance, and love.",
+      urls: [
+        "https://zodiacbee.com/reports",
+        "https://zodiacbee.com/vedic-wisdom"
+      ]
+    };
+  }
+
+  // 4. Specific Service: Where to Find Baby Names
+  if (
+    /\b(where\s+(can\s+i\s+find|are)\s+baby\s+names|how\s+(do|can)\s+i\s+find\s+baby\s+names|baby\s+names\s+on\s+zodiacbee)\b/i.test(clean)
+  ) {
+    return {
+      answer: "You can discover personalized celestial baby names in ZodiacBee's **Baby Names** section:\n\n- **Nakshatra Naming Syllables (Akshar)**: Discover auspicious first letters and syllables based on the baby's birth star and Pada.\n- **Lo Shu Numerology Grid**: Check name vibrations and balance missing elements in the birth chart.\n- **Curated Collections**: Browse thousands of boy, girl, and unisex names filtered by meaning, origin, and cosmic elements.\n- **Personalized Baby Profile**: Enter birth date, time, and city to receive customized name suggestions aligned with their Kundli.",
+      urls: [
+        "https://zodiacbee.com/baby-names",
+        "https://zodiacbee.com/baby-names/lo-shu"
+      ]
+    };
+  }
+
+  // 5. Specific Service: Pricing & Subscriptions
+  if (
+    /\b(how\s+do\s+i\s+see\s+(your\s+)?pricing|what\s+is\s+(your\s+)?pricing|how\s+much\s+does\s+it\s+cost|pricing\s+on\s+zodiacbee|subscription\s+cost|see\s+pricing)\b/i.test(clean)
+  ) {
+    return {
+      answer: "You can view complete pricing, credit packages, and subscription options on the **Pricing & Plans** page:\n\n- **Free Tools & Forecasts**: Enjoy free daily horoscopes, basic birth charts, and initial calculators anytime.\n- **Pay-As-You-Go Credits**: Purchase credit packs to generate comprehensive in-depth reports (such as Natal, Synastry, or Sade Sati reports) or extended AskBee conversations.\n- **Subscription Plans**: Access ongoing astrological insights, regular report updates, and premium features.",
+      urls: [
+        "https://zodiacbee.com/pricing"
+      ]
+    };
+  }
+
+  // 6. Broad Service Overview
+  const broadServicePatterns = [
+    /\bwhat\s+(all\s+)?do\s+you\s+offer\b/i,
+    /\bwhat\s+services?\s+do\s+you\s+(provide|offer|have)\b/i,
+    /\bwhat\s+(astrology\s+)?services?\s+do\s+you\s+(provide|offer)\b/i,
+    /\bwhat\s+can\s+i\s+do\s+(on\s+zodiacbee|here)\b/i,
+    /\btell\s+me\s+about\s+(zodiacbee|your\s+services?|the\s+platform)\b/i,
+    /\bwhat\s+is\s+available\s+on\s+(your\s+platform|zodiacbee)\b/i,
+    /\bwhat\s+can\s+you\s+help\s+me\s+with\b/i,
+    /\bwhat\s+are\s+your\s+features\b/i,
+    /\bwhat\s+does\s+zodiacbee\s+offer\b/i
+  ];
+
+  if (broadServicePatterns.some(p => p.test(clean))) {
+    return {
+      answer: "ZodiacBee brings together astrology, tarot, and personalized cosmic experiences in one place. Here's what you can explore:\n\n- **🔮 Vedic Wisdom & Kundli**: Generate your full Vedic birth chart (Kundli), check Kundali Milan for marriage compatibility, view daily Panchang (Tithi, Nakshatra, Rahu Kaal), and analyze Sade Sati, Manglik Dosha, Kaal Sarp Dosha, and Mahadasha cycles with remedies.\n- **🃏 Tarot Lounge**: Draw cards for intuitive guidance on daily dilemmas, love and relationships, or career pathways with interactive spreads.\n- **✨ Zodiac & Western Horoscopes**: Explore daily, weekly, monthly, and yearly horoscope predictions for all 12 zodiac signs, plus 7-day forecasts and sign traits.\n- **👶 Celestial Baby Names**: Discover auspicious baby names aligned with your child's birth chart, Nakshatra naming syllables (Akshar), and Lo Shu numerology.\n- **📊 In-Depth Astrology Reports**: Access personalized comprehensive reports including Natal Chart, Synastry Relationship Compatibility, and Planetary Transits.\n- **🔢 Calculators & Numerology**: Instant tools including Name Numerology, Moon Sign Calculator, and Lo Shu grid.\n- **💳 Pricing & Subscriptions**: Transparent credit bundles and plans to unlock detailed reports and premium guidance.",
+      urls: [
+        "https://zodiacbee.com/vedic-wisdom",
+        "https://zodiacbee.com/tarot",
+        "https://zodiacbee.com/zodiac",
+        "https://zodiacbee.com/baby-names",
+        "https://zodiacbee.com/reports",
+        "https://zodiacbee.com/pricing"
+      ]
+    };
+  }
+
+  return null;
+}
+
 // UI Controller
 let searchEngine = null;
 const chatMessages = document.getElementById('chatMessages');
@@ -463,20 +695,39 @@ function formatTextWithLinks(text) {
   return formatted;
 }
 
-function getButtonLabel(url) {
-  if (!url) return "✨ Visit ZodiacBee";
-  const cleanUrl = url.trim();
+function getButtonLabel(item) {
+  if (!item) return "✨ Visit ZodiacBee";
+  if (typeof item === 'object' && item.label) return item.label;
+  const cleanUrl = (typeof item === 'object' ? item.url : item).trim();
 
-  // 1. Specific Calculators & Tools
+  // 1. Suicide Prevention & Crisis Lines (Part B Safety)
+  if (cleanUrl.includes("988lifeline.org")) return "Chat with 988 — US";
+  if (cleanUrl.includes("988.ca")) return "Visit 988 Canada";
+  if (cleanUrl.includes("country=ca")) return "Call or Text 988 — Canada";
+  if (cleanUrl.includes("country=us") || cleanUrl.startsWith("tel:988")) return "Call or Text 988 — US";
+
+  // 2. Specific Calculators & Tools
   if (cleanUrl.includes("/calculator/first-name")) return "🔤 Name Numerology Calculator";
   if (cleanUrl.includes("/calculator/moon-sign")) return "🌙 Moon Sign Calculator";
 
-  // 2. Baby Names Section
+  // 3. Baby Names Section
   if (cleanUrl.includes("/baby-names/lo-shu")) return "🔢 View Lo Shu Grid";
   if (cleanUrl.includes("/baby-names/profile")) return "👶 Enter Baby Birth Details";
   if (cleanUrl.includes("/baby-names")) return "👶 Baby Names";
 
-  // 3. Vedic Wisdom Specific Reports
+  // 4. Tarot Lounge
+  if (cleanUrl.includes("/tarot")) return "🃏 Tarot Lounge";
+
+  // 5. Astrology Reports
+  if (cleanUrl.includes("/reports/natal-chart")) return "📊 Natal Chart Report";
+  if (cleanUrl.includes("/reports/synastry-chart")) return "💑 Synastry Chart Report";
+  if (cleanUrl.includes("/reports/transit-chart")) return "🪐 Transit Chart Report";
+  if (cleanUrl.includes("/reports")) return "📊 Astrology Reports";
+
+  // 6. Pricing & Plans
+  if (cleanUrl.includes("/pricing")) return "💳 Pricing & Plans";
+
+  // 7. Vedic Wisdom Specific Reports
   if (cleanUrl.includes("/vedic-wisdom/kundali-match")) return "💑 Check Marriage Compatibility";
   if (cleanUrl.includes("/vedic-wisdom/kundli")) return "🔮 Open Kundli Report";
   if (cleanUrl.includes("/vedic-wisdom/sade-sati")) return "🪐 Open Sade Sati Calculator";
@@ -487,12 +738,12 @@ function getButtonLabel(url) {
   if (cleanUrl.includes("/vedic-wisdom/pitra-dosha")) return "🕊️ Pitra Dosha Guide";
   if (cleanUrl.includes("/vedic-wisdom")) return "🔮 Vedic Wisdom";
 
-  // 4. Terms of Use & Policies (accurately labeled per destination)
+  // 8. Terms of Use & Policies (accurately labeled per destination)
   if (cleanUrl.includes("/refund-policy") || cleanUrl.includes("refund")) return "📄 Read Refund Policy";
   if (cleanUrl.includes("/privacy")) return "🔒 Privacy Policy";
   if (cleanUrl.includes("/terms")) return "⚖️ Terms of Use";
 
-  // 5. Horoscope / Zodiac Page (Must match pathname /zodiac, NOT domain zodiacbee.com)
+  // 9. Horoscope / Zodiac Page (Must match pathname /zodiac, NOT domain zodiacbee.com)
   if (/\/zodiac(\/|\?|#|$)/.test(cleanUrl)) return "✨ Explore Horoscope Readings";
 
   return "✨ Visit ZodiacBee";
@@ -520,14 +771,28 @@ async function handleSend(e) {
 
   typingElem.remove();
 
-  // 1. Explicit Identity & Clarification Intent Check (Takes priority over BM25)
+  // 1. Critical Crisis & Suicide Prevention Safety Check (Highest Priority — Runs before ANY other intent or BM25)
+  const crisis = checkCrisisSafety(query);
+  if (crisis) {
+    appendBotMessage(crisis.answer, crisis.urls);
+    return;
+  }
+
+  // 2. Explicit Identity & Clarification Intent Check
   const explicit = checkExplicitIntent(query);
   if (explicit) {
     appendBotMessage(explicit.answer, explicit.urls);
     return;
   }
 
-  // 2. BM25 Knowledge Base Search
+  // 3. Service Discovery & Platform Guidance Intent Check
+  const service = getServicesOverview(query);
+  if (service) {
+    appendBotMessage(service.answer, service.urls);
+    return;
+  }
+
+  // 4. BM25 Knowledge Base Search
   if (!searchEngine) {
     appendBotMessage(
       "The knowledge base is currently loading. Please try again in a moment.",
@@ -548,7 +813,7 @@ async function handleSend(e) {
     const uniqueUrls = [...new Set(urls)].slice(0, 2);
     appendBotMessage(topMatch.answer, uniqueUrls);
   } else {
-    // 3. Intelligent Fallback with topic choices and clarification
+    // 5. Intelligent Fallback with topic choices and clarification
     appendBotMessage(
       "I couldn't find a sufficiently relevant answer to that question in my knowledge base. Could you rephrase your question or choose a topic such as Vedic Wisdom, Baby Names or Terms of Use?",
       [
@@ -576,8 +841,9 @@ function appendBotMessage(answer, urls) {
 
   if (urls && urls.length > 0) {
     html += '<div class="link-buttons">';
-    urls.forEach(url => {
-      const label = getButtonLabel(url);
+    urls.forEach(item => {
+      const url = typeof item === 'object' ? item.url : item;
+      const label = (typeof item === 'object' && item.label) ? item.label : getButtonLabel(item);
       html += `<a href="${url}" target="_blank" rel="noopener noreferrer" class="action-btn">
         <span>${label}</span>
         <span>&rarr;</span>
